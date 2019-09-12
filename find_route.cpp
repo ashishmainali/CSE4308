@@ -41,25 +41,35 @@ int max_num_generated;
 vector <string> visited;
 int is_this_node_visited(Node * current_node)
 {
-  vector<string>::iterator it;
-  it = std::find (visited.begin(), visited.end(), current_node -> _name);
-  if (it != visited.end())
-  return 0;
+  if (visited.empty())
+  {
+    return 0;
+  }
   else
-  return 1;
+  {
+    int i;
+    for (i = 0; i <visited.size();i++)
+    {
+      if (current_node->_name.compare(visited[i])==0)
+      {
+        return 1;
+      }
+    }
+    return 0;
+  }
 }
 
 bool compare_Nodes( Node *n1,  Node *n2)
 {
-  return n1->_distance > n2->_distance;
+  return n1->_distance < n2->_distance;
 }
 
 void Node::print()
-{/*
+{
   ostringstream ss;
-  ss<<_source<<" "<< _destination<<" " << _distance;
+  ss<<_name<<" "<< _distance<<" " << _level;
   cout<<ss.str()<<endl;
-  */
+
 }
 int Node::get_distance()
 {
@@ -87,7 +97,7 @@ void Node::set_level(int level)
 
 void add_to_fringe(Node * curr)
 {
-
+  cout << "Added to Fringe: "<< curr->_name << " " <<curr->_level << " "<< curr->_distance << endl;
   fringe.push_back(curr);
   max_num_fringe++;
   max_num_generated++;
@@ -97,22 +107,38 @@ void add_to_fringe(Node * curr)
 
 int expand_node()
 {
+  //cout<<"Fringe Size : "<< fringe.size()<<endl;
   if (fringe.empty())
   {
+    cout << "Empty";
     return -1;
   }
   sort(fringe.begin(), fringe.end(),compare_Nodes);
-  Node *expand_node= fringe.back();
-  fringe.pop_back();
+  cout << "\nAt fringe\n"<<endl;
+  for (int i =0; i <fringe.size();i++)
+  {
+    cout << fringe[i]->_name << " " <<fringe[i]->_level << " "<< fringe[i]->_distance << endl;
+  }
+
+
+  //fringe.back()->print();
+  Node *expand_node= fringe[0];
   max_num_fringe--;
   if (GOAL.compare(expand_node->_name) == 0)
   return 1;
   else if( is_this_node_visited(expand_node))
+  {
+    cout << expand_node->_name << " is visited.";
+    fringe.erase(fringe.begin());
+    max_num_expanded++;
     return 0;
+  }
   else
   {
+    visited.push_back(expand_node->_name);
     string node_name = expand_node->_name;
-    int i ;
+    cout <<node_name<< "is being expanded\n";
+    int i=0 ;
     while ( i < graph_List.size())
     {
       if(node_name.compare(graph_List[i][0])==0)
@@ -122,7 +148,6 @@ int expand_node()
         temp->set_distance(expand_node->_distance + stoi(graph_List[i][2]));
         temp->set_level(expand_node->_level + 1);
         temp->set_pointer(expand_node);
-        max_num_expanded++;
         add_to_fringe(temp);
       }
       if(node_name.compare(graph_List[i][1])==0)
@@ -132,43 +157,20 @@ int expand_node()
         temp->set_distance(expand_node->_distance + stoi(graph_List[i][2]));
         temp->set_level(expand_node->_level + 1);
         temp->set_pointer(expand_node);
-        max_num_expanded++;
         add_to_fringe(temp);
 
       }
       i++;
     }
+    max_num_expanded++;
+    fringe.erase(fringe.begin());
   }
   return 0;
 }
 
-
-
-
-void uniform_search (char ** argv)
+void open_file(string input_File_Name)
 {
   char delim = ' ';
-  string input_File_Name = argv[1];
-  GOAL = argv[3]; //the node that we are searching for
-
-  //creating the origin node which is the start point for the search.
-  Node * origin = new Node;
-  origin->set_name(argv[1]);
-  origin->set_pointer((Node *) NULL);
-  origin->set_distance(0);
-  origin->set_level(0);
-  visited.push_back(argv[1]);
-
-
-  add_to_fringe(origin);
-  int result;
-  do{
-      result = expand_node()
-  }
-  while (result)
-
-  if
-
 
   ifstream myfile (input_File_Name);
   if(!myfile) {
@@ -192,6 +194,71 @@ void uniform_search (char ** argv)
     getline(myfile,temp_Str);
   }
   myfile.close();
+}
+
+
+void uniform_search (char ** argv)
+{
+
+  string input_File_Name = argv[1];
+  open_file(input_File_Name);
+  GOAL = argv[3]; //the node that we are searching for
+
+  //creating the origin node which is the start point for the search.
+  Node * origin = new Node;
+  origin->set_name(argv[2]);
+  origin->set_pointer((Node *) NULL);
+  origin->set_distance(0);
+  origin->set_level(0);
+
+
+
+  add_to_fringe(origin);
+  int result;
+  do{
+    result = expand_node();
+  }
+  while (result == 0);
+  cout << "\nAt fringe\n"<<"Result ="<<result<<endl;
+  for (int i =0; i <fringe.size();i++)
+  {
+    cout << fringe[i]->_name << " " <<fringe[i]->_level << " "<< fringe[i]->_distance << endl;
+  }
+
+  if(result == 1)
+  {
+    cout << "nodes expanded: "<< max_num_expanded<<endl;
+    cout << "nodes generated: "<< max_num_generated<<endl;
+    cout << "max nodes in memory: "<< max_num_fringe <<endl;
+    cout << "distance: "<< fringe[0]->_distance <<".0 km"<<endl;
+    cout << "route:"<<endl;
+    Node *curr = fringe[0];
+    std::vector<string> print_result;
+
+
+    while (curr->_parent!= (Node *)NULL)
+    {
+      ostringstream ss;
+      ss << curr->_parent->_name << " to " << curr->_name <<", " << curr->_distance - curr->_parent->_distance <<".0 km"<<endl;
+      curr = curr->_parent;
+      print_result.push_back(ss.str());
+    }
+    int i =0;
+    for (i=print_result.size()-1;i>=0;i--)
+    {
+      cout<< print_result[i];
+    }
+  }
+  else if (result == -1)
+  {
+
+    cout << "nodes expanded: "<< max_num_expanded<<endl;
+    cout << "nodes generated: "<< max_num_generated<<endl;
+    cout << "max nodes in memory: "<< max_num_fringe <<endl;
+    cout << "No route found."<<endl;
+  }
+
+
 
 }
 
